@@ -352,7 +352,7 @@ async function dbGet(filter='') {
   return res.json();
 }
 async function dbUpsert(row) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/checkins`,{
+  const res = await fetch(`${SUPA_URL}/rest/v1/checkins?on_conflict=date`,{
     method:'POST',
     headers:{...HEADERS,'Prefer':'return=minimal,resolution=merge-duplicates'},
     body:JSON.stringify(row)
