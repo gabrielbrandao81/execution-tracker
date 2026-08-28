@@ -398,7 +398,16 @@ function showLoading(v) { document.getElementById('loading').style.display=v?'fl
 
 const todayKey = () => new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/, (_,y,m,d)=>`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
 const formatDate = s => new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
-const getLast7 = () => { const d=[]; for(let i=6;i>=0;i--){const x=new Date();x.setDate(x.getDate()-i);d.push(x.toISOString().split('T')[0]);} return d; };
+const toBRKey = (d) => d.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/,(_,y,m,dd)=>`${y}-${m.padStart(2,'0')}-${dd.padStart(2,'0')}`);
+const getThisWeekDays = () => {
+  const today=new Date();
+  const dow=(today.getDay()+6)%7; // 0=Mon...6=Sun
+  const monday=new Date(today); monday.setDate(today.getDate()-dow);
+  const days=[];
+  for(let i=0;i<=dow;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(toBRKey(d));}
+  return days;
+};
+const getLast7 = getThisWeekDays;
 
 function showPage(id,btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -423,13 +432,16 @@ function renderPainel() {
   const today=todayKey(), todayRec=getByDate(today), banner=document.getElementById('checkin-banner');
   if(todayRec){document.getElementById('banner-title').textContent='Check-in feito hoje!';document.getElementById('banner-sub').textContent=`${todayRec.score}/4 hábitos completos`;banner.classList.add('done');}
   else{document.getElementById('banner-title').textContent='Registrar hoje';document.getElementById('banner-sub').textContent='Você ainda não fez o check-in de hoje';banner.classList.remove('done');}
-  const week=getLast7(),weekRecs=cache.filter(r=>week.includes(r.date)),weekPts=weekRecs.reduce((s,r)=>s+r.score,0),weekPct=Math.round(weekPts/28*100);
-  document.getElementById('week-val').innerHTML=`${weekRecs.length}<span>/7 dias</span>`;
-  document.getElementById('week-pts').textContent=`${weekPts} de 28 pts`;
+  const week=getLast7(),weekRecs=cache.filter(r=>week.includes(r.date)),weekPts=weekRecs.reduce((s,r)=>s+r.score,0);
+  const weekDays=week.length, weekMaxPts=weekDays*4, weekPct=Math.round(weekPts/weekMaxPts*100);
+  document.getElementById('week-val').innerHTML=`${weekRecs.length}<span>/${weekDays} dias</span>`;
+  document.getElementById('week-pts').textContent=`${weekPts} de ${weekMaxPts} pts`;
   document.getElementById('week-pct').textContent=weekPct+'%';
   document.getElementById('week-ring').style.strokeDashoffset=138.2-(138.2*weekPct/100);
-  const now=new Date(),mDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  const monthRecs=cache.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const nowBR=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/');
+  const nowDay=parseInt(nowBR[0]), nowMonth=parseInt(nowBR[1])-1, nowYear=parseInt(nowBR[2]);
+  const mDays=nowDay; // days so far this month
+  const monthRecs=cache.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===nowMonth&&d.getFullYear()===nowYear;});
   const mPts=monthRecs.reduce((s,r)=>s+r.score,0),mMax=mDays*4,mPct=Math.round(mPts/mMax*100);
   document.getElementById('month-val').innerHTML=`${monthRecs.length}<span>/${mDays} dias</span>`;
   document.getElementById('month-pts').textContent=`${mPts} de ${mMax} pts`;
@@ -474,7 +486,7 @@ function calcStreak(habit) {
 }
 
 let habitState={academia:false,aerobico:false,leitura:false,mente:false},treinoSel=null,histFilter='todos';
-let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+const _initBR=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/');let calYear=parseInt(_initBR[2]),calMonth=parseInt(_initBR[1])-1;
 
 function initCheckin() {
   const today=todayKey();
@@ -588,7 +600,7 @@ function renderHistorico(){
   const now=new Date();
   let data=[...cache];
   if(histFilter==='semana'){const w=getLast7();data=data.filter(r=>w.includes(r.date));}
-  else if(histFilter==='mes'){data=data.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});}
+  else if(histFilter==='mes'){const _br=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/');const _m=parseInt(_br[1])-1,_y=parseInt(_br[2]);data=data.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===_m&&d.getFullYear()===_y;});}
   const el=document.getElementById('hist-list');
   if(!data.length){el.innerHTML='<div style="text-align:center;color:var(--gray-400);padding:2rem;font-size:14px">Nenhum registro encontrado</div>';return;}
   const svgs={academia:'<svg viewBox="0 0 24 24" fill="none"><path d="M6.5 6.5h11M6.5 17.5h11M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="2" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="18" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>',aerobico:'<svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-8 4 16 3-8h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',leitura:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="currentColor" stroke-width="2"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="currentColor" stroke-width="2"/></svg>',mente:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 017 7c0 3.5-2 5.5-2 8H7c0-2.5-2-4.5-2-8a7 7 0 017-7z" stroke="currentColor" stroke-width="2"/><path d="M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'};
