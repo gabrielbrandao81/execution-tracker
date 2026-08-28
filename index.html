@@ -334,12 +334,12 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
           <div style="display:flex;gap:10px;margin-top:12px" id="ins-evo-stats"></div>
         </div>
         <div class="ins-card">
-          <div class="ins-card-title">🏆 Melhor semana</div>
-          <div id="best-week-wrap"></div>
+          <div class="ins-card-title">Taxa de execução <span id="taxa-periodo-label" style="font-weight:400;text-transform:none;color:var(--gray-400)"></span></div>
+          <div id="taxa-habitos"></div>
         </div>
         <div class="ins-card">
-          <div class="ins-card-title">Taxa de execução</div>
-          <div id="taxa-habitos"></div>
+          <div class="ins-card-title">🏆 Recorde histórico</div>
+          <div id="best-week-wrap"></div>
         </div>
       </div>
     </div>
@@ -659,40 +659,54 @@ function renderInsights(){
       <div class="prog-stat-item" style="flex:1"><div class="lbl">Melhor semana</div><div class="val" style="color:var(--green)">${best.pct}%</div></div>`;
   } else statsEl.innerHTML='';
 
-  // === MELHOR SEMANA ===
+  // === MELHOR SEMANA (recorde histórico) ===
   const bwEl=document.getElementById('best-week-wrap');
   if(weeks.length){
     const bw=weeks.reduce((b,w)=>w.pts>b.pts?w:b,weeks[0]);
+    const medals=bw.pct>=75?'🥇':bw.pct>=50?'🥈':'🥉';
     bwEl.innerHTML=`
       <div style="display:flex;align-items:center;gap:14px;padding:4px 0">
-        <div style="font-size:36px;font-weight:800;color:var(--green)">${bw.pct}%</div>
-        <div>
-          <div style="font-size:14px;font-weight:700">Semana de ${bw.label}</div>
-          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${bw.pts} pontos · ${bw.days} dias com check-in</div>
+        <div style="font-size:42px">${medals}</div>
+        <div style="flex:1">
+          <div style="font-size:28px;font-weight:800;color:var(--green);line-height:1">${bw.pct}%</div>
+          <div style="font-size:13px;font-weight:700;margin-top:2px">Semana de ${bw.label}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${bw.pts}/28 pontos · ${bw.days} dias registrados</div>
         </div>
       </div>
-      <div style="height:8px;background:var(--gray-100);border-radius:4px;margin-top:10px">
+      <div style="height:8px;background:var(--gray-100);border-radius:4px;margin-top:12px">
         <div style="height:8px;border-radius:4px;background:var(--green);width:${bw.pct}%;transition:width .5s"></div>
-      </div>`;
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Recorde histórico de ${weeks.length} semanas</div>`;
   } else bwEl.innerHTML='<div style="color:var(--gray-400);font-size:13px">Sem dados ainda</div>';
 
-  // === TAXA POR HÁBITO ===
-  const total=cache.length;
+  // === TAXA POR HÁBITO (baseada no período selecionado) ===
+  const periodoRecs=sliced.flatMap(w=>{
+    // pega os dias reais daquela semana no cache
+    const wDate=new Date(w.label.split('/').reverse().join('-')+'T12:00:00');
+    // label é dd/mm, precisamos achar os registros daquela semana
+    return [];
+  });
+  // Abordagem direta: usar os dias do período selecionado
+  const now2=new Date();
+  const cutoff=new Date(now2);
+  cutoff.setDate(cutoff.getDate()-(insPeriod*7));
+  const periodoCache=cache.filter(r=>new Date(r.date+'T12:00:00')>=cutoff);
+  const totalP=periodoCache.length;
   const taxaEl=document.getElementById('taxa-habitos');
-  if(!total){taxaEl.innerHTML='<div style="color:var(--gray-400);font-size:13px">Sem dados ainda</div>';return;}
+  if(!totalP){taxaEl.innerHTML='<div style="color:var(--gray-400);font-size:13px">Sem dados no período</div>';return;}
   const habitos=[
     {k:'academia',label:'🏋️ Academia'},
     {k:'aerobico',label:'🏃 Aeróbico'},
     {k:'leitura',label:'📚 Leitura'},
     {k:'mente',label:'🧠 Mente Limpa'}
   ];
-  taxaEl.innerHTML=habitos.map(({k,label})=>{
-    const count=cache.filter(r=>r[k]).length;
-    const pct=Math.round(count/total*100);
+  taxaEl.innerHTML=`<div style="font-size:11px;color:var(--gray-400);margin-bottom:10px">Últimas ${insPeriod} semanas · ${totalP} dias registrados</div>`+habitos.map(({k,label})=>{
+    const count=periodoCache.filter(r=>r[k]).length;
+    const pct=Math.round(count/totalP*100);
     const color=pct>=75?'#22c55e':pct>=50?'#f59e3f':'#fca5a5';
     return `<div style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px">
-        <span>${label}</span><span style="color:var(--gray-500)">${pct}% (${count}/${total})</span>
+        <span>${label}</span><span style="color:var(--gray-500)">${pct}% (${count}/${totalP})</span>
       </div>
       <div style="height:7px;background:var(--gray-100);border-radius:4px">
         <div style="height:7px;border-radius:4px;background:${color};width:${pct}%;transition:width .5s"></div>
