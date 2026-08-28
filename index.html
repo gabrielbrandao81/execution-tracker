@@ -106,7 +106,13 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
 .cal-nav-btn { width: 32px; height: 32px; background: var(--white); border: 1px solid var(--gray-200); border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .cal-nav-btn svg { width: 16px; height: 16px; stroke: var(--gray-600); }
 .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
-.cal-dow { text-align: center; font-size: 11px; font-weight: 700; color: var(--gray-400); padding: 4px 0; }
+.prog-stat-item { background: var(--gray-50); border-radius: 10px; padding: 10px 12px; }
+.prog-stat-item .lbl { font-size: 11px; color: var(--gray-400); }
+.prog-stat-item .val { font-size: 20px; font-weight: 800; margin-top: 2px; }
+.cal-filter { padding: 6px 14px; border-radius: 20px; border: none; font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--gray-100); color: var(--gray-600); transition: all .15s; }
+.cal-filter.active { background: var(--green); color: white; }
+.cal-cell.hit { background: var(--green); color: white; }
+.cal-cell.miss { background: #fca5a5; color: #7f1d1d; }
 .cal-cell { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--gray-300); }
 .cal-cell.has-day { cursor: pointer; }
 .cal-cell.score-1 { background: #fca5a5; color: #7f1d1d; }
@@ -283,13 +289,20 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
     <div id="page-calendario" class="page">
       <div class="cal-wrapper">
         <div class="cal-title"><h2>Calendário</h2><p>Visão mensal da sua execução</p></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="cal-filters">
+          <button class="cal-filter active" onclick="setCalFilter('geral',this)">Geral</button>
+          <button class="cal-filter" onclick="setCalFilter('academia',this)">🏋️ Academia</button>
+          <button class="cal-filter" onclick="setCalFilter('aerobico',this)">🏃 Aeróbico</button>
+          <button class="cal-filter" onclick="setCalFilter('leitura',this)">📚 Leitura</button>
+          <button class="cal-filter" onclick="setCalFilter('mente',this)">🧠 Mente</button>
+        </div>
         <div class="cal-nav">
           <button class="cal-nav-btn" onclick="changeMonth(-1)"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
           <span class="cal-month" id="cal-month-label"></span>
           <button class="cal-nav-btn" onclick="changeMonth(1)"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
-        <div class="cal-legend">
+        <div class="cal-legend" id="cal-legend">
           <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>4/4</div>
           <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fdba74"></div>2–3</div>
           <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fca5a5"></div>0–1</div>
@@ -310,14 +323,23 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
     <div id="page-insights" class="page">
       <div class="ins-wrapper">
         <div class="ins-title"><h2>Insights</h2><p>Análise da sua execução</p></div>
-        <div class="ins-card"><div class="ins-card-title">Frequência de treinos</div><div class="treino-freq" id="treino-freq"></div></div>
-        <div class="ins-card"><div class="ins-card-title">Tipos de aeróbico</div><div class="aero-list" id="aero-list"></div></div>
         <div class="ins-card">
-          <div class="ins-card-title">Média geral</div>
-          <div class="media-wrap">
-            <div class="donut"><svg viewBox="0 0 70 70" width="70" height="70"><circle class="donut-bg" cx="35" cy="35" r="28"/><circle class="donut-fill" id="donut-fill" cx="35" cy="35" r="28" stroke-dasharray="175.9" stroke-dashoffset="175.9"/></svg><div class="donut-label" id="donut-pct">0%</div></div>
-            <div class="media-info"><div class="pts" id="ins-pts">0 pontos em 0 dias</div><div class="sub" id="ins-media">Média de 0 pts/dia</div></div>
+          <div class="ins-card-title">Evolução semanal</div>
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button class="cal-filter active" onclick="setInsPeriod(4,this)">4 sem</button>
+            <button class="cal-filter" onclick="setInsPeriod(8,this)">8 sem</button>
+            <button class="cal-filter" onclick="setInsPeriod(12,this)">12 sem</button>
           </div>
+          <div style="position:relative;height:180px"><canvas id="evoChart"></canvas></div>
+          <div style="display:flex;gap:10px;margin-top:12px" id="ins-evo-stats"></div>
+        </div>
+        <div class="ins-card">
+          <div class="ins-card-title">🏆 Melhor semana</div>
+          <div id="best-week-wrap"></div>
+        </div>
+        <div class="ins-card">
+          <div class="ins-card-title">Taxa de execução</div>
+          <div id="taxa-habitos"></div>
         </div>
       </div>
     </div>
@@ -341,6 +363,7 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const SUPA_URL = 'https://iktkfmsbktganxtfjnkm.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrdGtmbXNia3RnYW54dGZqbmttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4Mjg4NDIsImV4cCI6MjA5MzQwNDg0Mn0.F8Dy8gC6NH0yXuBeIxMFN2Nvc78Ct4HCEL2ugvdxeyo';
@@ -373,7 +396,7 @@ async function loadAll() {
 function getByDate(date) { return cache.find(r=>r.date===date)||null; }
 function showLoading(v) { document.getElementById('loading').style.display=v?'flex':'none'; }
 
-const todayKey = () => new Date().toISOString().split('T')[0];
+const todayKey = () => new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/, (_,y,m,d)=>`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
 const formatDate = s => new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
 const getLast7 = () => { const d=[]; for(let i=6;i>=0;i--){const x=new Date();x.setDate(x.getDate()-i);d.push(x.toISOString().split('T')[0]);} return d; };
 
@@ -423,10 +446,13 @@ function renderPainel() {
 function calcStreakByScore(minScore) {
   let streak=0;
   const sorted=[...cache].sort((a,b)=>b.date.localeCompare(a.date));
-  const today=todayKey(); let expecting=today;
+  const today=todayKey();
+  const yesterday=()=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()-1);return d.toISOString().split('T')[0];};
+  const todayRec=getByDate(today);
+  // Se hoje já tem check-in, começa de hoje; senão começa de ontem
+  let expecting=todayRec?today:yesterday();
   for(const r of sorted){
     if(r.date===expecting&&r.score>=minScore){streak++;const d=new Date(expecting+'T12:00:00');d.setDate(d.getDate()-1);expecting=d.toISOString().split('T')[0];}
-    else if(r.date===today&&r.score<minScore) break;
     else if(r.date<expecting) break;
   }
   return streak;
@@ -435,10 +461,13 @@ function calcStreakByScore(minScore) {
 function calcStreak(habit) {
   let streak=0;
   const sorted=[...cache].sort((a,b)=>b.date.localeCompare(a.date));
-  const today=todayKey(); let expecting=today;
+  const today=todayKey();
+  const yesterday=()=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()-1);return d.toISOString().split('T')[0];};
+  const todayRec=getByDate(today);
+  // Se hoje já tem check-in com esse hábito, começa de hoje; senão começa de ontem
+  let expecting=todayRec&&todayRec[habit]?today:yesterday();
   for(const r of sorted){
     if(r.date===expecting&&r[habit]){streak++;const d=new Date(expecting+'T12:00:00');d.setDate(d.getDate()-1);expecting=d.toISOString().split('T')[0];}
-    else if(r.date===today&&!r[habit]) break;
     else if(r.date<expecting) break;
   }
   return streak;
@@ -521,6 +550,9 @@ async function finalizeCheckin(){
   btn.innerHTML='Finalizar meu dia <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
+let calFilter='geral';
+function setCalFilter(f,btn){calFilter=f;document.querySelectorAll('.cal-filter').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderCalendar();}
+
 function renderCalendar(){
   const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   document.getElementById('cal-month-label').textContent=months[calMonth]+' '+calYear;
@@ -533,10 +565,22 @@ function renderCalendar(){
   for(let d=1;d<=total;d++){
     const k=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const rec=getByDate(k),isToday=k===today;
-    if(rec){const sc=rec.score,cls=sc===4?'score-4':sc===3?'score-3':sc===2?'score-2':'score-1';html+=`<div class="cal-cell ${cls} has-day${isToday?' today':''}" onclick="openModal('${k}')">${d}</div>`;}
-    else html+=`<div class="cal-cell${isToday?' today':''}">${d}</div>`;
+    if(calFilter==='geral'){
+      if(rec){const sc=rec.score,cls=sc===4?'score-4':sc===3?'score-3':sc===2?'score-2':'score-1';html+=`<div class="cal-cell ${cls} has-day${isToday?' today':''}" onclick="openModal('${k}')">${d}</div>`;}
+      else html+=`<div class="cal-cell${isToday?' today':''}">${d}</div>`;
+    } else {
+      if(rec&&rec[calFilter]) html+=`<div class="cal-cell hit has-day${isToday?' today':''}" onclick="openModal('${k}')">${d}</div>`;
+      else if(rec&&!rec[calFilter]) html+=`<div class="cal-cell miss has-day${isToday?' today':''}" onclick="openModal('${k}')">${d}</div>`;
+      else html+=`<div class="cal-cell${isToday?' today':''}">${d}</div>`;
+    }
   }
   grid.innerHTML=html;
+  const leg=document.getElementById('cal-legend');
+  if(calFilter==='geral'){
+    leg.innerHTML='<div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>4/4</div><div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fdba74"></div>2–3</div><div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fca5a5"></div>0–1</div>';
+  } else {
+    leg.innerHTML='<div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Fez</div><div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fca5a5"></div>Não fez</div>';
+  }
 }
 function changeMonth(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 
@@ -561,22 +605,101 @@ function renderHistorico(){
 }
 function setFilter(f,btn){histFilter=f;document.querySelectorAll('.hist-filter').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderHistorico();}
 
-function renderInsights(){
-  const tCounts={A:0,B:0,C:0,D:0,E:0};
-  cache.forEach(r=>{if(r.treino)tCounts[r.treino]++;});
-  const freqEl=document.getElementById('treino-freq'),hasT=Object.values(tCounts).some(v=>v>0);
-  freqEl.innerHTML=hasT?Object.entries(tCounts).filter(([,v])=>v>0).map(([k,v])=>`<div class="treino-freq-item"><div class="tf-num">${v}</div><div class="tf-lbl">Treino ${k}</div></div>`).join(''):'<div style="color:var(--gray-400);font-size:13px">Nenhum treino registrado</div>';
-  const aeroCounts={};
-  cache.forEach(r=>{if(r.aerobico&&r.aero_detail){const k=r.aero_detail.trim();aeroCounts[k]=(aeroCounts[k]||0)+1;}});
-  const aeroEl=document.getElementById('aero-list'),aeroE=Object.entries(aeroCounts).sort((a,b)=>b[1]-a[1]);
-  aeroEl.innerHTML=aeroE.length?aeroE.map(([k,v])=>`<div class="aero-item"><span>${k}</span><span class="aero-count">${v}x</span></div>`).join(''):'<div style="color:var(--gray-400);font-size:13px">Nenhum aeróbico registrado</div>';
-  const totalPts=cache.reduce((s,r)=>s+r.score,0),days=cache.length,media=days?(totalPts/days).toFixed(1):0,pct=days?Math.round(totalPts/(days*4)*100):0;
-  document.getElementById('ins-pts').textContent=`${totalPts} pontos em ${days} dias`;
-  document.getElementById('ins-media').textContent=`Média de ${media} pts/dia`;
-  document.getElementById('donut-pct').textContent=pct+'%';
-  document.getElementById('donut-fill').style.strokeDashoffset=175.9-(175.9*pct/100);
-}
+let evoChartInst=null, insPeriod=4;
+function setInsPeriod(w,btn){insPeriod=w;document.querySelectorAll('#ins-period-btns .cal-filter').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderInsights();}
 
+function renderInsights(){
+  // === EVOLUÇÃO SEMANAL ===
+  const sorted=[...cache].sort((a,b)=>a.date.localeCompare(b.date));
+  // build weeks: each week = Mon-Sun
+  const weeks=[];
+  if(sorted.length){
+    let wStart=new Date(sorted[0].date+'T12:00:00');
+    wStart.setDate(wStart.getDate()-((wStart.getDay()+6)%7)); // go to Monday
+    const last=new Date(sorted[sorted.length-1].date+'T12:00:00');
+    while(wStart<=last){
+      const wEnd=new Date(wStart); wEnd.setDate(wEnd.getDate()+6);
+      const wKey=wStart.toISOString().split('T')[0];
+      const days=sorted.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=wStart&&d<=wEnd;});
+      const pts=days.reduce((s,r)=>s+r.score,0);
+      const maxPts=7*4;
+      weeks.push({label:wStart.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),pts,pct:Math.round(pts/maxPts*100),days:days.length});
+      wStart=new Date(wStart); wStart.setDate(wStart.getDate()+7);
+    }
+  }
+  const sliced=weeks.slice(-insPeriod);
+  if(evoChartInst){evoChartInst.destroy();evoChartInst=null;}
+  const canvas=document.getElementById('evoChart');
+  if(sliced.length){
+    evoChartInst=new Chart(canvas,{
+      type:'bar',
+      data:{
+        labels:sliced.map(w=>w.label),
+        datasets:[{
+          label:'Score',
+          data:sliced.map(w=>w.pts),
+          backgroundColor:sliced.map(w=>w.pct>=75?'#22c55e':w.pct>=50?'#f59e3f':'#fca5a5'),
+          borderRadius:6,
+          borderSkipped:false
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
+        x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}},
+        y:{beginAtZero:true,max:28,ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}
+      }}
+    });
+  }
+  // mini stats
+  const statsEl=document.getElementById('ins-evo-stats');
+  if(sliced.length){
+    const avg=Math.round(sliced.reduce((s,w)=>s+w.pts,0)/sliced.length);
+    const best=sliced.reduce((b,w)=>w.pts>b.pts?w:b,sliced[0]);
+    statsEl.innerHTML=`
+      <div class="prog-stat-item" style="flex:1"><div class="lbl">Média/semana</div><div class="val">${avg} pts</div></div>
+      <div class="prog-stat-item" style="flex:1"><div class="lbl">Melhor semana</div><div class="val" style="color:var(--green)">${best.pct}%</div></div>`;
+  } else statsEl.innerHTML='';
+
+  // === MELHOR SEMANA ===
+  const bwEl=document.getElementById('best-week-wrap');
+  if(weeks.length){
+    const bw=weeks.reduce((b,w)=>w.pts>b.pts?w:b,weeks[0]);
+    bwEl.innerHTML=`
+      <div style="display:flex;align-items:center;gap:14px;padding:4px 0">
+        <div style="font-size:36px;font-weight:800;color:var(--green)">${bw.pct}%</div>
+        <div>
+          <div style="font-size:14px;font-weight:700">Semana de ${bw.label}</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${bw.pts} pontos · ${bw.days} dias com check-in</div>
+        </div>
+      </div>
+      <div style="height:8px;background:var(--gray-100);border-radius:4px;margin-top:10px">
+        <div style="height:8px;border-radius:4px;background:var(--green);width:${bw.pct}%;transition:width .5s"></div>
+      </div>`;
+  } else bwEl.innerHTML='<div style="color:var(--gray-400);font-size:13px">Sem dados ainda</div>';
+
+  // === TAXA POR HÁBITO ===
+  const total=cache.length;
+  const taxaEl=document.getElementById('taxa-habitos');
+  if(!total){taxaEl.innerHTML='<div style="color:var(--gray-400);font-size:13px">Sem dados ainda</div>';return;}
+  const habitos=[
+    {k:'academia',label:'🏋️ Academia'},
+    {k:'aerobico',label:'🏃 Aeróbico'},
+    {k:'leitura',label:'📚 Leitura'},
+    {k:'mente',label:'🧠 Mente Limpa'}
+  ];
+  taxaEl.innerHTML=habitos.map(({k,label})=>{
+    const count=cache.filter(r=>r[k]).length;
+    const pct=Math.round(count/total*100);
+    const color=pct>=75?'#22c55e':pct>=50?'#f59e3f':'#fca5a5';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px">
+        <span>${label}</span><span style="color:var(--gray-500)">${pct}% (${count}/${total})</span>
+      </div>
+      <div style="height:7px;background:var(--gray-100);border-radius:4px">
+        <div style="height:7px;border-radius:4px;background:${color};width:${pct}%;transition:width .5s"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
 function openModal(k){
   const rec=getByDate(k);if(!rec)return;
   document.getElementById('modal-title').textContent=formatDate(k);
