@@ -363,28 +363,27 @@ html, body { height: 100%; background: var(--gray-50); font-family: 'Nunito', sa
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SUPA_URL = 'https://iktkfmsbktganxtfjnkm.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrdGtmbXNia3RnYW54dGZqbmttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4Mjg4NDIsImV4cCI6MjA5MzQwNDg0Mn0.F8Dy8gC6NH0yXuBeIxMFN2Nvc78Ct4HCEL2ugvdxeyo';
-const HEADERS = {'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
+const firebaseConfig = {
+  apiKey: "AIzaSyCk_UhHG5Gq2DANzVTKLUYzTyKStIAkdck",
+  authDomain: "execution-tracker-739ed.firebaseapp.com",
+  projectId: "execution-tracker-739ed",
+  storageBucket: "execution-tracker-739ed.firebasestorage.app",
+  messagingSenderId: "653046713954",
+  appId: "1:653046713954:web:e366a7961d6c1e3968cb3b"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-async function dbGet(filter='') {
-  const res = await fetch(`${SUPA_URL}/rest/v1/checkins?order=date.desc${filter}`,{headers:HEADERS});
-  if(!res.ok) throw new Error(await res.text());
-  return res.json();
+async function dbGet() {
+  const snap = await db.collection('checkins').orderBy('date','desc').get();
+  return snap.docs.map(d => ({id: d.id, ...d.data()}));
 }
 async function dbUpsert(row) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/checkins?on_conflict=date`,{
-    method:'POST',
-    headers:{...HEADERS,'Prefer':'return=minimal,resolution=merge-duplicates'},
-    body:JSON.stringify(row)
-  });
-  if(!res.ok) {
-    const txt = await res.text();
-    console.error('Supabase error:', res.status, txt);
-    throw new Error(txt);
-  }
+  await db.collection('checkins').doc(row.date).set(row, {merge: true});
 }
 
 let cache = [];
